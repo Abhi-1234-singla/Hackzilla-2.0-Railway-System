@@ -1,112 +1,96 @@
-import { useMemo } from 'react';
+import React from 'react';
 import { GeoJSON } from 'react-leaflet';
-import { useGisStore } from '../../store/useGisStore';
+import { useAssetStore } from '../../store/useAssetStore';
+import { useTimeStore } from '../../store/useTimeStore';
+import { renderToStaticMarkup } from 'react-dom/server';
+import L from 'leaflet';
+import AssetTooltip from './AssetTooltip';
 
-/** Inset GeoJSON ring [lng,lat] from current map bounds (demo asset tracks the viewport). */
-function demoPolygonRingFromBounds(bounds, insetRatio = 0.2) {
-  if (!bounds) return null;
-  const { north, south, east, west } = bounds;
-  const latSpan = north - south;
-  const lngSpan = east - west;
-  const padLat = latSpan * insetRatio;
-  const padLng = lngSpan * insetRatio;
-  let w = west + padLng;
-  let e = east - padLng;
-  let s = south + padLat;
-  let n = north - padLat;
-  if (w >= e || s >= n) {
-    const cx = (west + east) / 2;
-    const cy = (south + north) / 2;
-    const hw = Math.max(Math.abs(lngSpan) * 0.04, 1e-6);
-    const hh = Math.max(Math.abs(latSpan) * 0.04, 1e-6);
-    return [
-      [cx - hw, cy - hh],
-      [cx + hw, cy - hh],
-      [cx + hw, cy + hh],
-      [cx - hw, cy + hh],
-      [cx - hw, cy - hh],
-    ];
-  }
-  return [
-    [w, s],
-    [e, s],
-    [e, n],
-    [w, n],
-    [w, s],
-  ];
-}
-
-// Style mapping based on AI classification
-const getAssetStyle = (feature) => {
-  const type = feature.properties.type;
-
-  const styles = {
-    building: { color: '#ff3366', fillColor: '#ff3366', fillOpacity: 0.4, weight: 2 },
-    water: { color: '#33ccff', fillColor: '#33ccff', fillOpacity: 0.5, weight: 1 },
-    tree: { color: '#00ff66', fillColor: '#00ff66', fillOpacity: 0.4, weight: 1 },
-    road: { color: '#a3a3a3', fillColor: '#a3a3a3', fillOpacity: 0.6, weight: 4 },
-    railway: { color: '#ff9900', fillColor: '#ff9900', fillOpacity: 0.8, weight: 3 },
-  };
-
-  return styles[type] || { color: '#ffffff', fillOpacity: 0.2 };
+const COLOR_SCHEME = {
+  Buildings: '#ef4444', // Red
+  Water: '#3b82f6',     // Blue
+  Trees: '#22c55e',     // Green
+  Roads: '#9ca3af',     // Gray
+  Drains: '#eab308',    // Yellow
+  Railway: '#f97316',   // Orange
 };
 
-export default function AssetOverlay() {
-  const activeLayers = useGisStore((state) => state.activeLayers);
-  const mapBounds = useGisStore((state) => state.mapBounds);
-  const setSelectedAsset = useGisStore((state) => state.setSelectedAsset);
+const COMPARE_COLORS = {
+  added: '#22c55e',     // Green
+  removed: '#ef4444',   // Red
+  unchanged: '#6b7280', // Gray
+};
 
-  // Mocked backend response: demo footprint tracks visible map bounds (replace with API payload).
-  const mockAiData = useMemo(() => {
-    const ring = demoPolygonRingFromBounds(mapBounds);
-    const features = ring
-      ? [
-          {
-            type: 'Feature',
-            properties: {
-              id: 1,
-              type: 'building',
-              confidence: 0.94,
-              area: 'Viewport-linked (demo)',
-            },
-            geometry: { type: 'Polygon', coordinates: [ring] },
-          },
-        ]
-      : [];
-    return { type: 'FeatureCollection', features };
-  }, [mapBounds]);
+const AssetOverlay = () => {
+  const { assets, activeLayers, setSelectedAsset } = useAssetStore();
+  const { compareMode } = useTimeStore();
+
+  if (!assets || !assets.features) return null;
+
+  // Filter features based on active layers
+  const filteredFeatures = assets.features.filter(
+    (feature) => activeLayers[feature.properties.assetType]
+  );
+
+  const styleFeature = (feature) => {
+    let color = COLOR_SCHEME[feature.properties.assetType] || '#ffffff';
+    let weight = 2;
+    let fillOpacity = 0.4;
+
+    if (compareMode && feature.properties.status) {
+      color = COMPARE_COLORS[feature.properties.status] || color;
+      if (feature.properties.status === 'unchanged') {
+        fillOpacity = 0.1;
+      }
+    }
+
+    return {
+      color: color,
+      weight: weight,
+      opacity: 0.8,
+      fillOpacity: fillOpacity,
+      className: 'transition-all duration-300 ease-in-out hover:fill-opacity-80'
+    };
+  };
 
   const onEachFeature = (feature, layer) => {
-    layer.on({
-      mouseover: (e) => {
-        const target = e.target;
-        target.setStyle({ fillOpacity: 0.8, weight: 3 });
-      },
-      mouseout: (e) => {
-        const target = e.target;
-        target.setStyle(getAssetStyle(feature));
-      },
-      click: () => {
-        setSelectedAsset(feature.properties);
-      },
+    // Tooltip
+    const tooltipContent = renderToStaticMarkup(<AssetTooltip feature={feature} />);
+    layer.bindTooltip(tooltipContent, {
+      sticky: true,
+      className: 'custom-tooltip',
+      opacity: 1
     });
 
-    layer.bindTooltip(
-      `
-      <div style="background: #0a0f18; color: white; padding: 8px; border: 1px solid #334155; border-radius: 4px;">
-        <strong style="color: #00f0ff; text-transform: uppercase;">${feature.properties.type}</strong><br/>
-        Confidence: ${(feature.properties.confidence * 100).toFixed(1)}%<br/>
-        Area: ${feature.properties.area}
-      </div>
-    `,
-      { sticky: true, className: 'custom-gis-tooltip' }
-    );
+    // Click handler
+    layer.on({
+      click: (e) => {
+        // Stop event from propagating to map
+        L.DomEvent.stopPropagation(e);
+        setSelectedAsset(feature);
+      },
+      mouseover: (e) => {
+        const layer = e.target;
+        layer.setStyle({
+          weight: 4,
+          fillOpacity: 0.7
+        });
+      },
+      mouseout: (e) => {
+        const layer = e.target;
+        layer.setStyle(styleFeature(feature));
+      }
+    });
   };
 
-  const visibleFeatures = {
-    ...mockAiData,
-    features: mockAiData.features.filter((f) => activeLayers.includes(f.properties.type)),
-  };
+  return (
+    <GeoJSON
+      key={`geojson-${Date.now()}-${compareMode}`} // Force re-render on toggle
+      data={{ type: 'FeatureCollection', features: filteredFeatures }}
+      style={styleFeature}
+      onEachFeature={onEachFeature}
+    />
+  );
+};
 
-  return <GeoJSON data={visibleFeatures} style={getAssetStyle} onEachFeature={onEachFeature} />;
-}
+export default AssetOverlay;

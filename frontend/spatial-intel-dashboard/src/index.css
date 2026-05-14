@@ -1,30 +1,127 @@
 @import "tailwindcss";
 
 @theme {
-  --color-gis-bg: #0a0f18;
-  --color-gis-panel: rgba(15, 23, 42, 0.82);
-  --color-gis-border: #334155;
-  --color-gis-accent: #00f0ff;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  --color-slate-400: #94a3b8;
+  --color-slate-300: #cbd5e1;
+  --color-slate-200: #e2e8f0;
+  --color-slate-100: #f1f5f9;
+  
+  --color-cyan-950: #083344;
+  --color-cyan-900: #164e63;
+  --color-cyan-800: #155e75;
+  --color-cyan-600: #0891b2;
+  --color-cyan-500: #06b6d4;
+  --color-cyan-400: #22d3ee;
+  
+  --color-red-500: #ef4444;
+  --color-red-400: #f87171;
+  
+  --color-blue-500: #3b82f6;
+  --color-blue-400: #60a5fa;
+  
+  --color-green-500: #22c55e;
+  --color-green-400: #4ade80;
+  
+  --color-orange-500: #f97316;
+  --color-orange-400: #fb923c;
+  
+  --color-yellow-500: #eab308;
+  --color-yellow-400: #facc15;
 }
 
+@layer base {
+  body {
+    background-color: #020617;
+    color: #f1f5f9;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+}
+
+/* Leaflet Overrides for Dark Theme */
 .leaflet-container {
-  background: #0a0f18 !important;
+  background: #020617 !important;
+  outline: none !important;
 }
 
-/* Remove default white background from Leaflet tooltips */
-.custom-gis-tooltip {
+.leaflet-control-zoom a {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  color: #94a3b8 !important;
+  border-color: rgba(51, 65, 85, 0.5) !important;
+  backdrop-filter: blur(8px);
+}
+.leaflet-control-zoom a:hover {
+  background-color: rgba(30, 41, 59, 0.9) !important;
+  color: #22d3ee !important;
+}
+
+/* Custom Tooltip */
+.custom-tooltip {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  padding: 0 !important;
+}
+.custom-tooltip::before {
+  display: none !important;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+/* Custom Range Slider */
+.slider-thumb-cyan::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22d3ee;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+  transition: all 0.2s;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+.slider-thumb-cyan::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 15px rgba(34, 211, 238, 0.8);
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+.slider-thumb-cyan::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22d3ee;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+  transition: all 0.2s;
+}
+
+/* Leaflet Draw specific overrides */
+.leaflet-draw-toolbar a {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  border-color: rgba(51, 65, 85, 0.5) !important;
+  background-image: none !important;
+  color: #cbd5e1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.leaflet-draw-toolbar a:hover {
+  background-color: rgba(30, 41, 59, 0.9) !important;
+  color: #22d3ee !important;
 }
