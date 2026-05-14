@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gis-bg: #0a0f18;
+  --color-gis-panel: rgba(15, 23, 42, 0.82);
+  --color-gis-border: #334155;
+  --color-gis-accent: #00f0ff;
+}
+
+.leaflet-container {
+  background: #0a0f18 !important;
+}
+
+/* Remove default white background from Leaflet tooltips */
+.custom-gis-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
